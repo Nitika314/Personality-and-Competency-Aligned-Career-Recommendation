@@ -47,6 +47,7 @@ This system is designed for students, graduates, and career counselors or adviso
 
 ##  Project Structure
 ```
+├── images/                   # UI screenshots
 ├── app.py                    # Streamlit application
 ├── career.ipynb              # Model training notebook
 ├── career.csv                # Training dataset
