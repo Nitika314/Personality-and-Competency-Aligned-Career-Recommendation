@@ -61,7 +61,7 @@ This system is designed for students, graduates, and career counselors or adviso
 ## Screenshots
 
 <p align="center">
-  <img src="images/image.png" width="700">
+  <img src="images/imag.png" width="700">
 </p>
 
 <p align="center">
