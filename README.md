@@ -91,4 +91,4 @@ This system is designed for students, graduates, and career counselors or adviso
 
 ## Live Demo
 
-**Try it now:** https://nitika314-personality-and-competency-aligned-career--app-itlv75.streamlit.app/
+**Try it now:**  https://nitika314-personality-and-competency-aligned-career--app-itlv75.streamlit.app/
