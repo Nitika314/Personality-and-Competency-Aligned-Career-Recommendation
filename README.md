@@ -32,15 +32,17 @@ This system is designed for students, graduates, and career counselors or adviso
 ## Features
 
 - **Personalized Recommendations**: Based on Big Five personality traits, skills, and interests
-- **7 Career Clusters**: Technology, Healthcare, Business, Design, Education, Finance, Entrepreneurship
+- **Top 3 Career Matches**: Ranked recommendations
 - **Interactive UI**: Built with Streamlit for easy user interaction
-- **Role Suggestions**: Lists specific job roles based on education and field of study
-
+- **Role Suggestions**: Specific job roles based on education level and field of study
+- **Career Insights**: Salary ranges, job market outlook, and key skills needed
+- **Decision Rationale**: Explanations for why specific careers were recommended
+- **Downloadable Reports**: Save recommendations as text files
 
 ## Model Details
 
 - **Algorithm**: Random Forest Classifier
-- **Accuracy**: 84.27% (Test Set)
+- **Accuracy**: 83.66% (Test Set)
 - **Features**: 40+ engineered features
 - **Classes**: 7 career clusters
 
@@ -61,23 +63,28 @@ This system is designed for students, graduates, and career counselors or adviso
 ## Screenshots
 
 <p align="center">
-  <img src="images/imag.png" width="700">
+  <img src="images/image.png" width="700">
 </p>
 
 <p align="center">
   <img src="images/image1.png" width="700">
 </p>
-
 <p align="center">
   <img src="images/image2.png" width="700">
 </p>
-
 <p align="center">
   <img src="images/image3.png" width="700">
 </p>
-
 <p align="center">
   <img src="images/image4.png" width="700">
 </p>
-
+<p align="center">
+  <img src="images/image5.png" width="700">
+</p>
+<p align="center">
+  <img src="images/image6.png" width="700">
+</p>
+<p align="center">
+  <img src="images/image7.png" width="700">
+</p>
 

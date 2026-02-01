@@ -2,12 +2,11 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
+from datetime import datetime
 
 # Load artifacts
 model = joblib.load("career_model.joblib")
 feature_columns = joblib.load("feature_columns.joblib")
-numeric_medians = joblib.load("numeric_medians.joblib")
-cat_modes = joblib.load("cat_modes.joblib")
 risk_tolerance_mapping = joblib.load("risk_tolerance_mapping.joblib")
 
 # CAREER ROLES DATABASE - Organized by Education Level and Field
@@ -256,8 +255,12 @@ CAREER_INFO = {
     }
 }
 
- #Get career roles that match the user's education level and field of study
+
+# Get career roles that match the user's education level and field of study
 def get_relevant_roles(career_cluster, education_level, field_of_study):
+    """
+    Retrieve career roles based on career cluster, education level, and field of study.
+    """
     if career_cluster not in CAREER_ROLES:
         return ["Various professional roles in this field"]
     
@@ -287,11 +290,17 @@ def get_relevant_roles(career_cluster, education_level, field_of_study):
     
     return all_roles if all_roles else ["Various professional roles in this field"]
 
-#Generate personalized explanations for why a career was recommended
+
+# Generate personalized explanations for why a career was recommended
 def explain_prediction(input_dict, predicted_career):
+    """
+    Generate personalized explanations based on user profile and predicted career.
+    """
     explanations = []
+    
     # Get career data
     career_data = CAREER_INFO.get(predicted_career, {})
+    
     # Interest-based explanations
     interests = {
         'Technology': input_dict.get('interest_technology', 0),
@@ -302,10 +311,12 @@ def explain_prediction(input_dict, predicted_career):
     }
     max_interest = max(interests, key=interests.get)
     max_interest_value = interests[max_interest]
+    
     if max_interest_value >= 70:
         explanations.append(f"Your strong interest in **{max_interest}** ({max_interest_value}/100) aligns perfectly with this career path")
     elif max_interest_value >= 50:
         explanations.append(f"Your interest in **{max_interest}** ({max_interest_value}/100) matches well with this field")
+    
     # Skills-based explanations
     skills = {
         'Technical': input_dict.get('technical_skill', 0),
@@ -315,13 +326,30 @@ def explain_prediction(input_dict, predicted_career):
         'Leadership': input_dict.get('leadership_skill', 0),
         'Creative Thinking': input_dict.get('creative_thinking_skill', 0)
     }
-    # Get top skills
-    top_skills = sorted(skills.items(), key=lambda x: x[1], reverse=True)[:2]
-    for skill_name, skill_value in top_skills:
-        if skill_value >= 4:
-            explanations.append(f"Your excellent **{skill_name}** skills (rated {skill_value}/5) are highly valued in this field")
-        elif skill_value >= 3:
-            explanations.append(f"Your **{skill_name}** proficiency (rated {skill_value}/5) is a good foundation for this career")
+    
+    # Get relevant skills
+   
+    CAREER_RELEVANT_SKILLS = {
+        "Technology & Engineering":        ["Technical", "Data Reasoning", "Problem Solving"],
+        "Healthcare & Life Sciences":      ["Communication", "Problem Solving", "Leadership"],
+        "Business & Management":           ["Leadership", "Communication", "Problem Solving"],
+        "Design & Creative Media":         ["Creative Thinking", "Communication", "Problem Solving"],
+        "Education & Social Impact":       ["Communication", "Leadership", "Creative Thinking"],
+        "Finance & Economics":             ["Data Reasoning", "Problem Solving", "Technical"],
+        "Entrepreneurship & Freelance":    ["Leadership", "Creative Thinking", "Problem Solving"],
+    }
+
+    relevant_skills = CAREER_RELEVANT_SKILLS.get(predicted_career, [])
+    skill_explanations_added = 0
+    for skill_name, skill_value in sorted(skills.items(), key=lambda x: x[1], reverse=True):
+        if skill_name in relevant_skills and skill_value >= 3:
+            if skill_value >= 4:
+                explanations.append(f"Your excellent **{skill_name}** skills (rated {skill_value}/5) are highly valued in this field")
+            else:
+                explanations.append(f"Your **{skill_name}** proficiency (rated {skill_value}/5) is a good foundation for this career")
+            skill_explanations_added += 1
+            if skill_explanations_added >= 2:
+                break
     # Personality-based explanations
     personality = {
         'Openness': input_dict.get('openness', 0),
@@ -329,21 +357,19 @@ def explain_prediction(input_dict, predicted_career):
         'Extraversion': input_dict.get('extraversion', 0),
         'Agreeableness': input_dict.get('agreeableness', 0),
     }
+    
     # Career-specific personality matches
     if predicted_career == "Technology & Engineering" and personality['Openness'] >= 4:
         explanations.append("Your high openness to new ideas suits the constantly evolving tech landscape")
-    
     elif predicted_career == "Healthcare & Life Sciences" and personality['Agreeableness'] >= 4:
         explanations.append("Your compassionate nature aligns with healthcare's people-centered focus")
-    
     elif predicted_career == "Business & Management" and personality['Extraversion'] >= 4:
         explanations.append("Your extraverted personality is ideal for leadership and team management roles")
-    
     elif predicted_career == "Design & Creative Media" and personality['Openness'] >= 4:
         explanations.append("Your creative and open mindset is perfect for innovative design work")
-    
     elif predicted_career == "Finance & Economics" and personality['Conscientiousness'] >= 4:
         explanations.append("Your organized and detail-oriented nature fits well with financial analysis")
+    
     # Work style match
     work_style = input_dict.get('preferred_work_style', '')
     environment = input_dict.get('preferred_environment', '')
@@ -376,12 +402,16 @@ def explain_prediction(input_dict, predicted_career):
     
     if experience >= 3:
         explanations.append(f"Your **{experience} years of experience** gives you a competitive advantage in this field")
+    
     # If no explanations generated, add generic ones
     if len(explanations) == 0:
         explanations.append("Your unique combination of skills and interests makes you a good fit for this career")
         explanations.append("This field offers opportunities that match your work preferences and personality")
+    
     return explanations
 
+
+# Streamlit App Configuration
 st.set_page_config(page_title="Career Recommendation", layout="wide")
 
 st.title("🎯 Personality and Competency-Aligned Career Recommendation")
@@ -393,9 +423,9 @@ with st.form("profile_form"):
     st.subheader("👋 Personal Information")
     id_col1, id_col2 = st.columns(2)
     with id_col1:
-        user_id = st.text_input("User ID", placeholder="Enter User ID ", help="Optional identifier for your records")
+        user_id = st.text_input("User ID", placeholder="Enter User ID", help="Optional identifier for your records")
     with id_col2:
-        user_name = st.text_input("Name", placeholder="Enter Name ", help="Your name (optional)")
+        user_name = st.text_input("Name", placeholder="Enter Name", help="Your name (optional)")
 
     st.markdown("---")
     
@@ -408,7 +438,7 @@ with st.form("profile_form"):
     with col2:
         education = st.selectbox("Education Level", ["High School", "Undergraduate", "Graduate"])
     with col3:
-        field = st.selectbox("Field of Study", ["Computer Science", "IT", "Engineering", "Business", "Economics","Psychology", "Design", "Biology", "Other"])
+        field = st.selectbox("Field of Study", ["Computer Science", "IT", "Engineering", "Business", "Economics", "Psychology", "Design", "Biology", "Other"])
     with col4:
         experience_input = st.text_input("Years of Experience", value="2",
                                          help="Enter experience in format like '2 years' or just '2'")
@@ -502,9 +532,9 @@ with st.form("profile_form"):
                                      type="primary", 
                                      use_container_width=True)
 
-# Prediction
+
 if submitted:
-    
+    # Parse experience
     try:
         experience = float(str(experience_input).replace("years", "").replace("year", "").strip())
     except:
@@ -512,17 +542,28 @@ if submitted:
     
     # Ensure experience doesn't exceed age - 18
     experience = min(experience, max(0, age - 18))
-    experience = max(0, experience) 
+    experience = max(0, experience)
     
-    # Map risk tolerance to numeric 
-    risk_numeric = risk_tolerance_mapping.get(risk, 1)
+    # Validation Input
+    total_interests = sum([it, bu, cr, he, re])
+    total_skills = sum([tech, data, comm, prob, leader, creat])
     
-    #Valid Fields
+    if total_interests < 50 or total_skills < 5:
+        st.warning("📝 Your profile shows limited interests/skills. Consider completing a more detailed assessment.")
+    
+    if experience == 0:
+        st.info("ℹ️ No experience detected. Recommendations will focus on entry-level opportunities.")
+    
+    # Map risk tolerance to numeric
+    risk_numeric =  risk_tolerance_mapping.get(risk, 1)
+    
+    # Valid Fields
     valid_fields = ['Computer Science', 'Psychology', 'IT', 'Design', 'Biology', 
-                'Business', 'Economics', 'Engineering', 'Other']
+                    'Business', 'Economics', 'Engineering', 'Other']
+    
     input_dict = {
         "age": age,
-        "experience_years": experience, 
+        "experience_years": experience,
         "openness": openness,
         "conscientiousness": consc,
         "extraversion": extra,
@@ -548,41 +589,88 @@ if submitted:
 
     df_input = pd.DataFrame([input_dict])
 
-    # Filling missing Values
+    # Define features
     numeric_features = [
         'age', 'experience_years', 'openness', 'conscientiousness', 'extraversion',
         'agreeableness', 'neuroticism', 'technical_skill', 'data_reasoning_skill',
         'communication_skill', 'problem_solving_skill', 'leadership_skill',
         'creative_thinking_skill', 'interest_technology', 'interest_business',
         'interest_creative', 'interest_health_social', 'interest_research_academic',
-        'risk_tolerance'
-    ]
-    for col in numeric_features:
-        if col in df_input.columns:
-            df_input[col] = df_input[col].fillna(numeric_medians.get(col, df_input[col].median()))
-
-    categorical_features = ['education_level', 'field_of_study','preferred_work_style', 'preferred_environment']
-    for col in categorical_features:
-        if col in df_input.columns:
-            df_input[col] = df_input[col].fillna(cat_modes.get(col, 'Unknown'))
-
+        'risk_tolerance']
+    categorical_features = ['education_level', 'field_of_study', 'preferred_work_style', 'preferred_environment']
+    interest_columns = ['interest_technology', 'interest_business', 'interest_creative',
+                        'interest_health_social', 'interest_research_academic']
+    scaler = joblib.load("interest_scaler.joblib")
+    df_input[interest_columns] = scaler.transform(df_input[interest_columns])
     # Feature Engineering
-    interest_cols = ['interest_technology', 'interest_business', 'interest_creative','interest_health_social', 'interest_research_academic']
-    df_input['max_interest'] = df_input[interest_cols].max(axis=1)
-    df_input['tech_vs_business'] = df_input['interest_technology'] - df_input['interest_business']
-    df_input['creative_vs_social'] = df_input['interest_creative'] - df_input['interest_health_social']
-    df_input['tech_skill_vs_comm'] = df_input['technical_skill'] - df_input['communication_skill']
-    df_input['openness_creative'] = df_input['openness'] * df_input['creative_thinking_skill']
-    df_input['extraversion_lead'] = df_input['extraversion'] * df_input['leadership_skill']
-    df_input['is_stem'] = df_input['field_of_study'].str.contains('computer|engineering|it|math|physics|chemistry|biology|data', case=False, na=False).astype(int)
 
+    df_input['openness_creative']= df_input['openness']   * df_input['creative_thinking_skill']
+    df_input['extraversion_lead']= df_input['extraversion'] * df_input['leadership_skill']
     # Encoding
     df_encoded = pd.get_dummies(df_input, columns=categorical_features, drop_first=True)
+    
     # Align columns with training data
     df_aligned = df_encoded.reindex(columns=feature_columns, fill_value=0)
 
     # Predict
     pred = model.predict(df_aligned)[0]
+    confidence = model.predict_proba(df_aligned)[0].max()
+    
+    # Get top 3 predictions
+    probabilities = model.predict_proba(df_aligned)[0]
+    top_3_indices = np.argsort(probabilities)[-3:][::-1]
+    careers = model.classes_
+
+    # Show warning if top prediction has low confidence or interests are flat
+    # Check if interests are flat (all within 10 points of each other)
+    interest_values = [it, bu, cr, he, re]
+    interests_are_flat = (max(interest_values) - min(interest_values)) <= 10
+    
+    if confidence < 0.4 or interests_are_flat:
+        st.warning("⚠️ **Ambiguous Profile Detected**: Your interests are fairly balanced across domains. We're showing your top 3 career matches to help you explore options.")
+    
+    st.markdown("### 🎯 Your Top Career Matches")
+    st.markdown("---")
+
+    summary_cols = st.columns(3)
+    for i, idx in enumerate(top_3_indices):
+        career_name = careers[idx]
+        match_score = probabilities[idx] * 100
+        c_data = CAREER_INFO.get(career_name, {})
+        s_icon = c_data.get('icon', '🎯')
+        s_color = c_data.get('color', '#4A90E2')
+        rank_label = ["1st Match", "2nd Match", "3rd Match"][i]
+
+        with summary_cols[i]:
+            st.markdown(f"""
+                <div style='
+                    border: 2px solid {s_color};
+                    border-radius: 12px;
+                    padding: 20px;
+                    text-align: center;
+                    background: linear-gradient(135deg, {s_color}15 0%, {s_color}05 100%);
+                '>
+                    <div style='font-size: 2em; margin-bottom: 8px;'>{s_icon}</div>
+                    <div style='color: {s_color}; font-weight: 600; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px;'>{rank_label}</div>
+                    <div style='font-weight: 700; font-size: 1.05em; margin: 8px 0; color: #FFFFFF;'>{career_name}</div>
+                </div>
+            """, unsafe_allow_html=True)
+    
+    # Check field-career alignment
+    STRONG_ALIGNMENTS = {
+        'Computer Science': ['Technology & Engineering'],
+        'IT': ['Technology & Engineering'],
+        'Engineering': ['Technology & Engineering'],
+        'Biology': ['Healthcare & Life Sciences'],
+        'Business': ['Business & Management', 'Finance & Economics'],
+        'Economics': ['Finance & Economics', 'Business & Management'],
+        'Psychology': ['Healthcare & Life Sciences', 'Education & Social Impact'],
+        'Design': ['Design & Creative Media']
+    }
+
+    expected_careers = STRONG_ALIGNMENTS.get(field, [])
+    if expected_careers and pred not in expected_careers:
+        st.warning(f"🤔 **Unexpected Match**: Based on your **{field}** background, you might also want to explore: {', '.join(expected_careers)}")
     
     # Display Header with User Info
     if user_name or user_id:
@@ -597,11 +685,12 @@ if submitted:
             if user_id:
                 st.markdown(f"**ID:** `{user_id}`")
 
-   # Display Profile Summary
+    # Display Profile Summary
     st.markdown("---")
     st.subheader("📊 Profile Overview")
     
     sum_col1, sum_col2, sum_col3 = st.columns(3)
+    
     with sum_col1:
         st.markdown("##### 👤 Demographics")
         st.info(f"""
@@ -617,8 +706,6 @@ if submitted:
         **Environment:** {env.capitalize()}  
         **Risk Tolerance:** {risk}
         """)
-        
-        
     
     with sum_col2:
         st.markdown("##### 🧠 Personality Profile")
@@ -630,7 +717,7 @@ if submitted:
             "Neuroticism": neuro
         }
         for trait, score in personality_data.items():
-            st.write(f"**{trait}:** {'⭐' * score}") 
+            st.write(f"**{trait}:** {'⭐' * score}")
             
         st.markdown("##### 💪 Skills Overview")
         skills_data = {
@@ -657,65 +744,64 @@ if submitted:
         for interest, value in interests_data.items():
             st.write(f"**{interest}:** {value}/100")
             st.progress(value / 100)
-        
-        
-    # Display Prediction Result
-    st.markdown("---")
     
-    # Get career info safely
-    career_data = CAREER_INFO.get(pred, {
-        'icon': '🎯',
-        'color': '#4A90E2',
-        'description': 'This is an exciting career path with many opportunities.',
-        'examples': ['Various professional roles'],
-        'key_skills': ['Multiple skills required'],
-        'salary_range': 'Competitive',
-        'growth_outlook': 'Positive outlook',
-        'work_style': 'Varies'
-    })
-    
-    icon = career_data.get('icon', '🎯')
-    color = career_data.get('color', '#4A90E2')
-    
-    # Header with icon and color
-    st.markdown(f"""
-        <div style='text-align: center; padding: 30px; background: linear-gradient(135deg, {color}22 0%, {color}11 100%); border-radius: 15px; margin-bottom: 20px;'>
-            <h1 style='margin: 0; font-size: 3em;'>{icon}</h1>
-            <h2 style='margin: 10px 0; color: {color};'>Primary Career Cluster</h2>
-            <h1 style='margin: 0; color: #FFFFFF; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);'>{pred}</h1>
-        </div>
-    """, unsafe_allow_html=True)
+    # Display Prediction Results — full detail for each of the 3 careers
+    for rank, idx in enumerate(top_3_indices):
+        current_career = careers[idx]
+        match_score = probabilities[idx] * 100
+        rank_label = ["🥇 Primary Recommendation", "🥈 Second Recommendation", "🥉 Third Recommendation"][rank]
 
-    # Career Description
-    st.markdown("### 📖 About This Career Path")
-    st.info(career_data.get('description', 'This career path offers exciting opportunities.'))
-    
-    # Examples and Details columns
-    col1, col2 = st.columns([3, 2])
-    
-    with col1:
-        st.markdown("### 💼 Example Career Roles")
-        st.caption(f"Based on your education level ({education}) and field of study ({field})")
-        
-        # Get relevant roles using the function
-        relevant_roles = get_relevant_roles(pred, education, field)
-        for i, role in enumerate(relevant_roles, 1):
-            st.markdown(f"{i}. **{role}**")
-    
-    with col2:
-        st.markdown("### 📊 Career Insights")
-        st.markdown("**💰 Salary Range**")
-        st.write(career_data.get('salary_range', 'Competitive'))
-        st.markdown("**📈 Job Market Outlook**")
-        st.write(career_data.get('growth_outlook', 'Positive outlook'))
-        st.markdown("**🔑 Key Skills Needed**")
-        key_skills = career_data.get('key_skills', ['Multiple skills'])
-        for skill in key_skills:
-            st.write(f"• {skill}")
-        st.markdown("**⚙️ Typical Work Style**")
-        st.write(career_data.get('work_style', 'Varies'))
-    
-    # Why This Prediction
+        career_data = CAREER_INFO.get(current_career, {
+            'icon': '🎯',
+            'color': '#4A90E2',
+            'description': 'This is an exciting career path with many opportunities.',
+            'key_skills': ['Multiple skills required'],
+            'salary_range': 'Competitive',
+            'growth_outlook': 'Positive outlook',
+            'work_style': 'Varies'
+        })
+
+        icon = career_data.get('icon', '🎯')
+        color = career_data.get('color', '#4A90E2')
+
+        st.markdown("---")
+
+        # Header card
+        st.markdown(f"""
+            <div style='text-align: center; padding: 30px; background: linear-gradient(135deg, {color}22 0%, {color}11 100%); border-radius: 15px; margin-bottom: 20px;'>
+                <h1 style='margin: 0; font-size: 3em;'>{icon}</h1>
+                <h2 style='margin: 10px 0; color: {color};'>{rank_label}</h2>
+                <h1 style='margin: 0; color: #FFFFFF; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);'>{current_career}</h1>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # Description
+        st.markdown("### 📖 About This Career Path")
+        st.info(career_data.get('description', 'This career path offers exciting opportunities.'))
+
+        # Roles + Insights
+        col1, col2 = st.columns([3, 2])
+
+        with col1:
+            st.markdown("### 💼 Example Career Roles")
+            st.caption(f"Based on your education level ({education}) and field of study ({field})")
+            relevant_roles = get_relevant_roles(current_career, education, field)
+            for i, role in enumerate(relevant_roles, 1):
+                st.markdown(f"{i}. **{role}**")
+
+        with col2:
+            st.markdown("### 📊 Career Insights")
+            st.markdown("**💰 Salary Range**")
+            st.write(career_data.get('salary_range', 'Competitive'))
+            st.markdown("**📈 Job Market Outlook**")
+            st.write(career_data.get('growth_outlook', 'Positive outlook'))
+            st.markdown("**🔑 Key Skills Needed**")
+            for skill in career_data.get('key_skills', ['Multiple skills']):
+                st.write(f"• {skill}")
+            st.markdown("**⚙️ Typical Work Style**")
+            st.write(career_data.get('work_style', 'Varies'))
+
+    # Decision Rationale — primary match only
     st.markdown("---")
     st.markdown("### 🔍 Decision Rationale")
     st.caption("Based on your profile, here's why this career suits you:")
@@ -723,5 +809,35 @@ if submitted:
     for explanation in explanations:
         st.markdown(f"✓ {explanation}")
     
- 
+    # Save Results Section
+    st.markdown("---")
+    st.subheader("📄 Save Your Results")
+
+    if user_id or user_name:
+        report = f"""
+CAREER RECOMMENDATION REPORT
+{'='*50}
+
+User: {user_name or 'N/A'} (ID: {user_id or 'N/A'})
+Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+PRIMARY RECOMMENDATION: {pred}
+
+PROFILE: {age}y, {education}, {field}, {experience}y exp
+
+TOP 3 MATCHES:
+{chr(10).join([f"{i}. {careers[idx]}" for i, idx in enumerate(top_3_indices, 1)])}
+
+DECISION FACTORS:
+{chr(10).join([f"• {exp}" for exp in explanations])}
+"""
     
+        st.download_button(
+            "📥 Download Your Career Report",
+            report,
+            f"career_report_{user_id or 'anonymous'}_{datetime.now().strftime('%Y%m%d_%H%M')}.txt",
+            type="primary",
+            use_container_width=True
+        )
+    else:
+        st.info("💡 Enter a User ID above to enable report download")
