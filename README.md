@@ -88,3 +88,7 @@ This system is designed for students, graduates, and career counselors or adviso
   <img src="images/image7.png" width="700">
 </p>
 
+
+##🚀 Live Demo
+
+**Try it now:** https://nitika314-personality-and-competency-aligned-career--app-itlv75.streamlit.app/
