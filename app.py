@@ -284,7 +284,7 @@ def get_relevant_roles(career_cluster, education_level, field_of_study):
     
     # Add general roles
     for role in general_roles:
-        if role not in seen and len(all_roles) < 8:  # Limit to 8 roles
+        if role not in seen and len(all_roles) < 8: 
             all_roles.append(role)
             seen.add(role)
     
@@ -534,7 +534,7 @@ with st.form("profile_form"):
 
 
 if submitted:
-    # Parse experience
+    
     try:
         experience = float(str(experience_input).replace("years", "").replace("year", "").strip())
     except:
@@ -622,7 +622,6 @@ if submitted:
     careers = model.classes_
 
     # Show warning if top prediction has low confidence or interests are flat
-    # Check if interests are flat (all within 10 points of each other)
     interest_values = [it, bu, cr, he, re]
     interests_are_flat = (max(interest_values) - min(interest_values)) <= 10
     
@@ -745,7 +744,7 @@ if submitted:
             st.write(f"**{interest}:** {value}/100")
             st.progress(value / 100)
     
-    # Display Prediction Results — full detail for each of the 3 careers
+    # Display Full Prediction Results for each of the 3 careers
     for rank, idx in enumerate(top_3_indices):
         current_career = careers[idx]
         match_score = probabilities[idx] * 100
