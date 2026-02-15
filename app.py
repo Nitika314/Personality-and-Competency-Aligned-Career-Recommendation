@@ -386,7 +386,7 @@ def explain_prediction(input_dict, predicted_career):
         explanations.append("Your preference for **structure** matches the organized nature of this profession")
     
     # Risk tolerance
-    if risk >= 2 and predicted_career == "Entrepreneurship & Freelance":
+    if risk == 2 and predicted_career == "Entrepreneurship & Freelance":
         explanations.append("Your **high risk tolerance** is essential for entrepreneurial success")
     
     # Education and experience match
@@ -414,7 +414,7 @@ def explain_prediction(input_dict, predicted_career):
 # Streamlit App Configuration
 st.set_page_config(page_title="Career Recommendation", layout="wide")
 
-st.title("🎯 Personality and Competency-Aligned Career Recommendation")
+st.title("Personality and Competency-Aligned Career Recommendation")
 st.markdown("### Answer the questions below to get your personalized career path suggestion")
 st.markdown("---")
 
@@ -600,19 +600,20 @@ if submitted:
     categorical_features = ['education_level', 'field_of_study', 'preferred_work_style', 'preferred_environment']
     interest_columns = ['interest_technology', 'interest_business', 'interest_creative',
                         'interest_health_social', 'interest_research_academic']
-    scaler = joblib.load("interest_scaler.joblib")
-    df_input[interest_columns] = scaler.transform(df_input[interest_columns])
     # Feature Engineering
-
-    df_input['openness_creative']= df_input['openness']   * df_input['creative_thinking_skill']
-    df_input['extraversion_lead']= df_input['extraversion'] * df_input['leadership_skill']
+    df_input['work_life_alignment'] = (
+        (df_input['preferred_environment'].eq('flexible')).astype(int) -
+        (df_input['preferred_environment'].eq('structured')).astype(int) +
+        (df_input['risk_tolerance'].eq(0)).astype(int) -
+        (df_input['risk_tolerance'].eq(2)).astype(int)
+    )
     # Encoding
     df_encoded = pd.get_dummies(df_input, columns=categorical_features, drop_first=True)
     
     # Align columns with training data
     df_aligned = df_encoded.reindex(columns=feature_columns, fill_value=0)
 
-    # Predict
+    # Predict primary career cluster
     pred = model.predict(df_aligned)[0]
     confidence = model.predict_proba(df_aligned)[0].max()
     
@@ -668,9 +669,13 @@ if submitted:
     }
 
     expected_careers = STRONG_ALIGNMENTS.get(field, [])
-    if expected_careers and pred not in expected_careers:
-        st.warning(f"🤔 **Unexpected Match**: Based on your **{field}** background, you might also want to explore: {', '.join(expected_careers)}")
-    
+    if expected_careers:
+        # Get the top 3 career names
+        top_3_careers = [careers[idx] for idx in top_3_indices]
+        # Check if any expected career is in top 3
+        expected_in_top3 = any(career in top_3_careers for career in expected_careers)
+        if not expected_in_top3:
+            st.warning(f"🤔 **Unexpected Match**: Based on your **{field}** background, you might also want to explore: {', '.join(expected_careers)}")
     # Display Header with User Info
     if user_name or user_id:
         st.markdown("---")
