@@ -42,7 +42,7 @@ This system is designed for students, graduates, and career counselors or adviso
 ## Model Details
 
 - **Algorithm**: Random Forest Classifier
-- **Accuracy**: 83.66% (Test Set)
+- **Accuracy**: 83.24% (Test Set)
 - **Features**: 40+ engineered features
 - **Classes**: 7 career clusters
 
@@ -89,6 +89,6 @@ This system is designed for students, graduates, and career counselors or adviso
 </p>
 
 
-##🚀 Live Demo
+##  Live Demo
 
-**Try it now:** https://nitika314-personality-and-competency-aligned-career--app-itlv75.streamlit.app/
+**Try it now:** 
