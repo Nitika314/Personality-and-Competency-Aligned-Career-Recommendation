@@ -87,3 +87,7 @@ This system is designed for students, graduates, and career counselors or adviso
 <p align="center">
   <img src="images/image7.png" width="700">
 </p>
+<<<<<<< HEAD
+=======
+
+>>>>>>> 5784a1cf84d25e66e0bd9e62f23ed99160b5f1d7
