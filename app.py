@@ -3,845 +3,362 @@ import pandas as pd
 import numpy as np
 import joblib
 from datetime import datetime
+from config import (
+    CAREER_ROLES, CAREER_INFO, CAREER_RELEVANT_SKILLS,
+    STRONG_ALIGNMENTS, PERSONALITY_TRAITS, SKILLS, INTERESTS
+)
 
-# Load artifacts
-model = joblib.load("career_model.joblib")
-feature_columns = joblib.load("feature_columns.joblib")
+# Load artifacts 
+model                  = joblib.load("career_model.joblib")
+feature_columns        = joblib.load("feature_columns.joblib")
 risk_tolerance_mapping = joblib.load("risk_tolerance_mapping.joblib")
 
-# CAREER ROLES DATABASE - Organized by Education Level and Field
-CAREER_ROLES = {
-    "Education & Social Impact": {
-        "High School": {
-            "Any": ["Teaching Assistant", "Childcare Worker", "Community Outreach Coordinator", "Administrative Assistant (Educational Institutions)"],
-            "Computer Science": ["Educational Technology Support Specialist", "IT Support in Schools"],
-            "IT": ["Educational Technology Support Specialist", "IT Support in Schools"],
-            "Psychology": ["Mental Health Aide", "Youth Program Assistant"],
-            "Business": ["Education Program Coordinator Assistant", "Administrative Support in NGOs"],
-        },
-        "Undergraduate": {
-            "Any": ["Primary/Secondary School Teacher", "Social Worker", "Career Counselor", "Training Coordinator"],
-            "Computer Science": ["EdTech Developer", "E-Learning Platform Coordinator", "Digital Learning Specialist"],
-            "IT": ["Educational Technology Specialist", "Learning Management System Administrator"],
-            "Psychology": ["School Counselor", "Community Mental Health Worker", "Behavioral Therapist"],
-            "Business": ["Education Program Manager", "NGO Operations Manager", "Corporate Training Coordinator"],
-            "Design": ["Instructional Designer", "Educational Content Creator"],
-        },
-        "Graduate": {
-            "Any": ["University Professor/Lecturer", "Principal/Educational Administrator", "Curriculum Developer", "Public Policy Analyst", "Education Researcher"],
-            "Computer Science": ["EdTech Research Scientist", "AI in Education Researcher", "Learning Analytics Specialist"],
-            "IT": ["Chief Technology Officer (Education)", "Educational Systems Architect"],
-            "Psychology": ["Licensed Clinical Psychologist", "Educational Psychologist", "Social Services Director"],
-            "Business": ["NGO Executive Director", "Education Consultant", "Social Enterprise Founder"],
-            "Economics": ["Education Policy Economist", "Development Program Analyst"],
-        }
-    },
-    
-    "Technology & Engineering": {
-        "High School": {
-            "Any": ["IT Support Technician", "Junior Web Developer", "Computer Repair Technician", "Technical Support Specialist"],
-            "Computer Science": ["Junior Software Developer", "Web Developer (Entry-level)", "QA Tester"],
-            "IT": ["Network Support Technician", "Help Desk Specialist", "Systems Administrator Assistant"],
-            "Engineering": ["CAD Technician", "Engineering Technician", "Quality Control Technician"],
-        },
-        "Undergraduate": {
-            "Any": ["Software Developer", "Systems Engineer", "Network Engineer", "Data Analyst"],
-            "Computer Science": ["Full-Stack Developer", "Frontend/Backend Developer", "Software Engineer", "Mobile App Developer", "AI/ML Engineer"],
-            "IT": ["Cloud Solutions Associate", "DevOps Engineer", "Cybersecurity Analyst", "Database Administrator"],
-            "Engineering": ["Mechanical Engineer", "Civil Engineer", "Electrical Engineer", "Manufacturing Engineer"],
-            "Design": ["UI/UX Developer", "Product Designer (Tech)", "Web Designer"],
-            "Business": ["Technical Product Manager", "IT Business Analyst", "Technology Consultant"],
-        },
-        "Graduate": {
-            "Any": ["Senior Software Architect", "Principal Engineer", "Research Scientist (Tech)", "Engineering Manager"],
-            "Computer Science": ["Machine Learning Researcher", "AI Research Scientist", "Cloud Solutions Architect", "Tech Lead/Architect"],
-            "IT": ["Chief Technology Officer", "Information Security Manager", "Enterprise Architect"],
-            "Engineering": ["Lead Engineer", "R&D Director", "Engineering Consultant", "Project Manager (Engineering)"],
-            "Biology": ["Bioinformatics Scientist", "Computational Biology Researcher"],
-        }
-    },
-    
-    "Design & Creative Media": {
-        "High School": {
-            "Any": ["Graphic Design Assistant", "Social Media Coordinator", "Content Creator (Entry-level)", "Photography Assistant"],
-            "Design": ["Junior Graphic Designer", "Visual Content Creator", "Digital Artist"],
-            "Computer Science": ["Web Designer (Entry-level)", "UI Design Assistant"],
-        },
-        "Undergraduate": {
-            "Any": ["Graphic Designer", "Content Creator", "Video Editor", "Brand Designer", "Marketing Creative"],
-            "Design": ["UI/UX Designer", "Product Designer", "Art Director", "Motion Graphics Designer", "Visual Designer"],
-            "Computer Science": ["Frontend Designer", "Interactive Media Designer", "Game Designer"],
-            "IT": ["Web Designer", "Digital Media Specialist", "UX Researcher"],
-            "Business": ["Brand Strategist", "Marketing Creative Director", "Content Marketing Manager"],
-            "Psychology": ["UX Researcher", "User Experience Analyst", "Human-Centered Design Specialist"],
-        },
-        "Graduate": {
-            "Any": ["Creative Director", "Senior Art Director", "Design Strategist", "Creative Consultant"],
-            "Design": ["Design Director", "Experience Design Lead", "Creative Strategy Director", "Design Research Lead"],
-            "Computer Science": ["Design Technologist", "Creative Technology Director"],
-            "Business": ["Chief Creative Officer", "Brand Innovation Director"],
-            "Psychology": ["Design Psychology Researcher", "Behavioral Design Specialist"],
-        }
-    },
-    
-    "Healthcare & Life Sciences": {
-        "High School": {
-            "Any": ["Certified Nursing Assistant (CNA)", "Medical Assistant", "Pharmacy Technician", "Home Health Aide", "Patient Care Technician"],
-            "Computer Science": ["Healthcare IT Support", "Medical Records Technician"],
-            "IT": ["Healthcare Technology Support Specialist", "Clinical Systems Support"],
-            "Biology": ["Laboratory Assistant", "Veterinary Assistant"],
-        },
-        "Undergraduate": {
-            "Any": ["Registered Nurse (RN)", "Radiologic Technologist", "Respiratory Therapist", "Medical Laboratory Technician"],
-            "Biology": ["Clinical Research Coordinator", "Medical Laboratory Scientist", "Pharmaceutical Sales Representative", "Public Health Coordinator"],
-            "Computer Science": ["Health Informatics Specialist", "Medical Software Developer", "Clinical Data Analyst"],
-            "IT": ["Healthcare IT Specialist", "Clinical Systems Analyst", "Telemedicine Coordinator"],
-            "Psychology": ["Mental Health Counselor", "Substance Abuse Counselor", "Clinical Psychology Assistant"],
-            "Business": ["Healthcare Administrator", "Hospital Operations Manager", "Health Services Manager"],
-        },
-        "Graduate": {
-            "Any": ["Physician/Medical Doctor", "Nurse Practitioner", "Physician Assistant", "Physical Therapist", "Occupational Therapist"],
-            "Biology": ["Biomedical Researcher", "Pharmacist", "Geneticist", "Microbiologist", "Epidemiologist"],
-            "Computer Science": ["Bioinformatics Scientist", "Healthcare AI Researcher", "Medical Imaging Specialist"],
-            "IT": ["Chief Medical Information Officer", "Healthcare Data Scientist"],
-            "Psychology": ["Licensed Clinical Psychologist", "Psychiatrist", "Neuropsychologist", "Health Psychologist"],
-            "Business": ["Healthcare Executive", "Hospital CEO/COO", "Healthcare Consultant"],
-            "Economics": ["Healthcare Economist", "Health Policy Analyst"],
-        }
-    },
-    
-    "Business & Management": {
-        "High School": {
-            "Any": ["Sales Associate", "Customer Service Representative", "Administrative Assistant", "Retail Supervisor"],
-            "Computer Science": ["Tech Sales Representative", "IT Business Support"],
-            "Business": ["Junior Business Analyst", "Operations Assistant"],
-        },
-        "Undergraduate": {
-            "Any": ["Business Analyst", "Project Coordinator", "Marketing Specialist", "Human Resources Specialist", "Operations Analyst"],
-            "Business": ["Management Consultant", "Product Manager", "Business Development Manager", "Marketing Manager"],
-            "Economics": ["Market Research Analyst", "Economic Analyst", "Financial Analyst"],
-            "Computer Science": ["Technical Product Manager", "IT Project Manager", "Analytics Manager"],
-            "IT": ["IT Project Manager", "Technology Consultant", "Systems Business Analyst"],
-            "Psychology": ["Organizational Development Specialist", "HR Business Partner", "Talent Acquisition Manager"],
-            "Engineering": ["Engineering Project Manager", "Operations Manager", "Supply Chain Analyst"],
-        },
-        "Graduate": {
-            "Any": ["Senior Management Consultant", "Strategy Director", "Vice President (Operations)", "General Manager"],
-            "Business": ["MBA Leadership Roles", "Chief Operating Officer", "Strategy Consultant (Top Firms)", "Business Unit Director"],
-            "Economics": ["Chief Economist", "Strategic Planning Director", "Investment Strategy Manager"],
-            "Computer Science": ["VP of Product", "Chief Product Officer", "Technology Strategy Director"],
-            "Psychology": ["Chief Human Resources Officer", "Organizational Psychology Consultant"],
-            "Engineering": ["VP of Operations", "Chief Operating Officer (Manufacturing)"],
-        }
-    },
-    
-    "Entrepreneurship & Freelance": {
-        "High School": {
-            "Any": ["Freelance Writer", "Social Media Manager", "Online Seller/E-commerce", "Gig Worker (Various)", "Independent Contractor"],
-            "Computer Science": ["Freelance Web Developer", "App Developer (Indie)", "Tech Freelancer"],
-            "Design": ["Freelance Graphic Designer", "Independent Artist", "Content Creator"],
-        },
-        "Undergraduate": {
-            "Any": ["Startup Founder", "Independent Consultant", "Freelance Professional", "Small Business Owner", "E-commerce Entrepreneur"],
-            "Computer Science": ["Tech Startup Founder", "SaaS Entrepreneur", "Mobile App Entrepreneur", "Freelance Software Consultant"],
-            "Business": ["Business Consultant", "Social Entrepreneur", "Retail Business Owner", "Online Business Owner"],
-            "Design": ["Design Agency Owner", "Creative Studio Founder", "Freelance Creative Director"],
-            "IT": ["IT Consulting Business", "Managed Services Provider", "Tech Solutions Entrepreneur"],
-            "Engineering": ["Engineering Consulting Firm", "Product Development Startup"],
-        },
-        "Graduate": {
-            "Any": ["Serial Entrepreneur", "Venture-Backed Founder", "Investment Group Owner", "Large Enterprise Owner"],
-            "Computer Science": ["Tech Unicorn Founder", "AI/ML Startup Founder", "Platform Business Founder"],
-            "Business": ["Consulting Firm Founder", "Investment Fund Manager", "Corporate Venture Builder"],
-            "Engineering": ["Deep Tech Startup Founder", "Hardware Startup Founder"],
-            "Design": ["Design Innovation Lab Founder", "Experience Design Consultancy"],
-        }
-    },
-    
-    "Finance & Economics": {
-        "High School": {
-            "Any": ["Bank Teller", "Accounting Clerk", "Bookkeeper", "Payroll Clerk", "Financial Services Representative"],
-            "Business": ["Junior Financial Analyst Assistant", "Accounting Assistant"],
-            "Economics": ["Economic Research Assistant", "Data Entry Specialist (Finance)"],
-        },
-        "Undergraduate": {
-            "Any": ["Financial Analyst", "Accountant", "Tax Associate", "Auditor", "Financial Advisor"],
-            "Business": ["Investment Analyst", "Corporate Finance Associate", "Financial Planning Analyst", "Management Accountant"],
-            "Economics": ["Economist", "Economic Consultant", "Policy Analyst", "Market Research Analyst"],
-            "Computer Science": ["Financial Software Developer", "FinTech Analyst", "Quantitative Analyst"],
-            "IT": ["Financial Systems Analyst", "Risk Technology Specialist"],
-            "Engineering": ["Financial Engineer", "Risk Analyst (Technical)"],
-        },
-        "Graduate": {
-            "Any": ["Senior Financial Manager", "Investment Banker", "Portfolio Manager", "Chief Financial Officer"],
-            "Business": ["Chartered Accountant", "CFO", "Investment Banking VP", "Wealth Management Director"],
-            "Economics": ["Chief Economist", "Economic Policy Director", "Macroeconomic Strategist", "Economic Research Director"],
-            "Computer Science": ["Quantitative Researcher", "Algorithmic Trading Developer", "FinTech Innovation Director"],
-            "Engineering": ["Financial Engineering Manager", "Risk Management Director (Quantitative)"],
-        }
-    }
-}
+# Relevant job roles 
+def get_relevant_roles(cluster, education, field):
+    edu_roles = CAREER_ROLES.get(cluster, {}).get(education, {})
+    seen, roles = set(), []
+    for r in edu_roles.get(field, []) + edu_roles.get("Any", []):
+        if r not in seen and len(roles) < 8:
+            roles.append(r)
+            seen.add(r)
+    return roles or ["Various professional roles in this field"]
 
-# CAREER CLUSTER INFORMATION
-CAREER_INFO = {
-    "Education & Social Impact": {
-        "description": "Transform lives and communities through education, social work, and public service. Design learning experiences, advocate for social justice, and create positive change in society through teaching, policy development, and community engagement.",
-        "key_skills": ["Communication & Interpersonal Skills", "Empathy & Emotional Intelligence", "Leadership & Advocacy", "Problem Solving"],
-        "salary_range": "₹3.5-12 LPA (India) | $45k-90k (US)",
-        "growth_outlook": "📈 Steady Growth - 8% expected in education sector",
-        "work_style": "Highly Collaborative, Structured with Purpose-Driven Focus",
-        "icon": "📚",
-        "color": "#50E3C2"
-    },
-    
-    "Technology & Engineering": {
-        "description": "Design, develop, and implement innovative technological solutions that shape the future. Build software systems, engineer complex infrastructure, and solve critical technical challenges across diverse industries using cutting-edge tools and methodologies.",
-        "key_skills": ["Technical & Programming Skills", "Analytical & Problem Solving", "Systems Thinking", "Innovation & Adaptability"],
-        "salary_range": "₹5-30 LPA (India) | $70k-180k+ (US)",
-        "growth_outlook": "📈 Very High Growth - 15-20% projected in tech sectors",
-        "work_style": "Individual or Collaborative, Flexible or Structured",
-        "icon": "💻",
-        "color": "#4A90E2"
-    },
-    
-    "Design & Creative Media": {
-        "description": "Craft compelling visual narratives and user experiences that captivate audiences. Combine artistic vision with strategic thinking to create impactful designs, engaging content, and memorable brand experiences across digital and traditional media platforms.",
-        "key_skills": ["Creative & Visual Thinking", "Design Tools Proficiency", "Communication & Storytelling", "Attention to Detail"],
-        "salary_range": "₹3-15 LPA (India) | $45k-100k (US)",
-        "growth_outlook": "📊 Moderate Growth - 8% in creative industries",
-        "work_style": "Individual or Collaborative, Highly Flexible & Creative",
-        "icon": "🎨",
-        "color": "#9013FE"
-    },
-    
-    "Healthcare & Life Sciences": {
-        "description": "Advance human health and scientific knowledge through clinical care, research, and biomedical innovation. Work directly with patients, conduct groundbreaking research, or develop life-saving treatments in hospitals, laboratories, and pharmaceutical companies.",
-        "key_skills": ["Clinical & Scientific Knowledge", "Critical Thinking & Analysis", "Empathy & Patient Care", "Attention to Detail"],
-        "salary_range": "₹4-18 LPA (India) | $60k-150k+ (US)",
-        "growth_outlook": "📈 Very High Growth - 16% in healthcare services",
-        "work_style": "Highly Collaborative, Structured & Protocol-Driven",
-        "icon": "🏥",
-        "color": "#E94B3C"
-    },
-    
-    "Business & Management": {
-        "description": "Lead organizations, optimize operations, and drive strategic growth in dynamic business environments. Analyze market trends, manage teams, develop business strategies, and make data-driven decisions that impact organizational success and profitability.",
-        "key_skills": ["Leadership & People Management", "Strategic & Analytical Thinking", "Communication & Negotiation", "Business Acumen"],
-        "salary_range": "₹5-25 LPA (India) | $65k-140k (US)",
-        "growth_outlook": "📈 Steady Growth - 9% in management occupations",
-        "work_style": "Highly Collaborative, Flexible with Results Focus",
-        "icon": "💼",
-        "color": "#F5A623"
-    },
-    
-    "Entrepreneurship & Freelance": {
-        "description": "Build independent ventures and create your own professional path with autonomy and innovation. Launch startups, consult independently, or operate freelance businesses that leverage your expertise while embracing the risks and rewards of self-employment.",
-        "key_skills": ["Leadership & Self-Management", "Risk-Taking & Resilience", "Business Development", "Creative Problem Solving"],
-        "salary_range": "Highly Variable - ₹2-50+ LPA (India) | $30k-250k+ (US)",
-        "growth_outlook": "📈 High Growth - Increasing trend in gig economy",
-        "work_style": "Highly Individual, Maximum Flexibility, High Risk Tolerance",
-        "icon": "🚀",
-        "color": "#FF6B6B"
-    },
-    
-    "Finance & Economics": {
-        "description": "Manage capital, analyze financial markets, and provide strategic economic guidance to organizations and individuals. Work with complex financial instruments, economic models, and data analytics to optimize financial performance and ensure fiscal responsibility.",
-        "key_skills": ["Quantitative & Analytical Reasoning", "Financial Modeling & Analysis", "Attention to Detail", "Risk Assessment"],
-        "salary_range": "₹4.5-22 LPA (India) | $60k-130k+ (US)",
-        "growth_outlook": "📈 Steady Growth - 7-10% in finance sector",
-        "work_style": "Individual or Collaborative, Highly Structured",
-        "icon": "💰",
-        "color": "#7ED321"
-    }
-}
-
-
-# Get career roles that match the user's education level and field of study
-def get_relevant_roles(career_cluster, education_level, field_of_study):
-    """
-    Retrieve career roles based on career cluster, education level, and field of study.
-    """
-    if career_cluster not in CAREER_ROLES:
-        return ["Various professional roles in this field"]
-    
-    education_roles = CAREER_ROLES[career_cluster].get(education_level, {})
-    
-    # Get field-specific roles first
-    field_roles = education_roles.get(field_of_study, [])
-    
-    # Add general roles
-    general_roles = education_roles.get("Any", [])
-    
-    # Combine and remove duplicates while preserving order
-    all_roles = []
-    seen = set()
-    
-    # Prioritize field-specific roles
-    for role in field_roles:
-        if role not in seen:
-            all_roles.append(role)
-            seen.add(role)
-    
-    # Add general roles
-    for role in general_roles:
-        if role not in seen and len(all_roles) < 8: 
-            all_roles.append(role)
-            seen.add(role)
-    
-    return all_roles if all_roles else ["Various professional roles in this field"]
-
-
-# Generate personalized explanations for why a career was recommended
-def explain_prediction(input_dict, predicted_career):
-    """
-    Generate personalized explanations based on user profile and predicted career.
-    """
+#Decision rationale
+def explain_prediction(inp, career):
     explanations = []
-    
-    # Get career data
-    career_data = CAREER_INFO.get(predicted_career, {})
-    
-    # Interest-based explanations
     interests = {
-        'Technology': input_dict.get('interest_technology', 0),
-        'Business': input_dict.get('interest_business', 0),
-        'Creative/Arts': input_dict.get('interest_creative', 0),
-        'Health & Social': input_dict.get('interest_health_social', 0),
-        'Research/Academic': input_dict.get('interest_research_academic', 0)
+        "technology": inp["interest_technology"],
+        "business": inp["interest_business"],
+        "creative": inp["interest_creative"],
+        "health & social": inp["interest_health_social"],
+        "research": inp["interest_research_academic"]
     }
-    max_interest = max(interests, key=interests.get)
-    max_interest_value = interests[max_interest]
-    
-    if max_interest_value >= 70:
-        explanations.append(f"Your strong interest in **{max_interest}** ({max_interest_value}/100) aligns perfectly with this career path")
-    elif max_interest_value >= 50:
-        explanations.append(f"Your interest in **{max_interest}** ({max_interest_value}/100) matches well with this field")
-    
-    # Skills-based explanations
+    top_k, top_v = max(interests.items(), key=lambda x: x[1])
+    if top_v >= 50:
+        strength = "strong " if top_v >= 70 else ""
+        explanations.append(
+            f"Your {strength}interest in **{top_k}** ({top_v}/100) fits this career"
+        )
+        
     skills = {
-        'Technical': input_dict.get('technical_skill', 0),
-        'Data Reasoning': input_dict.get('data_reasoning_skill', 0),
-        'Communication': input_dict.get('communication_skill', 0),
-        'Problem Solving': input_dict.get('problem_solving_skill', 0),
-        'Leadership': input_dict.get('leadership_skill', 0),
-        'Creative Thinking': input_dict.get('creative_thinking_skill', 0)
+        "Technical": inp["technical_skill"],
+        "Data Reasoning": inp["data_reasoning_skill"],
+        "Communication": inp["communication_skill"],
+        "Problem Solving": inp["problem_solving_skill"],
+        "Leadership": inp["leadership_skill"],
+        "Creative Thinking": inp["creative_thinking_skill"]
     }
+    relevant = CAREER_RELEVANT_SKILLS.get(career, [])
+    top_skills = sorted(skills.items(), key=lambda x: x[1], reverse=True)
+    for name, val in top_skills:
+        if name in relevant and val >= 3 and len(explanations) < 3:
+            level = "excellent" if val >= 4 else "good"
+            explanations.append(f"Your {level} {name} skills ({val}/5) are valuable here")
     
-    # Get relevant skills
-   
-    CAREER_RELEVANT_SKILLS = {
-        "Technology & Engineering":        ["Technical", "Data Reasoning", "Problem Solving"],
-        "Healthcare & Life Sciences":      ["Communication", "Problem Solving", "Leadership"],
-        "Business & Management":           ["Leadership", "Communication", "Problem Solving"],
-        "Design & Creative Media":         ["Creative Thinking", "Communication", "Problem Solving"],
-        "Education & Social Impact":       ["Communication", "Leadership", "Creative Thinking"],
-        "Finance & Economics":             ["Data Reasoning", "Problem Solving", "Technical"],
-        "Entrepreneurship & Freelance":    ["Leadership", "Creative Thinking", "Problem Solving"],
-    }
+    traits = {
+        "Openness": inp["openness"],
+        "Conscientiousness": inp["conscientiousness"],
+        "Extraversion": inp["extraversion"],
+        "Agreeableness": inp["agreeableness"]}
+    career_traits = {
+        "Technology & Engineering": ("Openness", "fits fast-changing tech work"),
+        "Healthcare & Life Sciences": ("Agreeableness", "matches people-focused roles"),
+        "Business & Management": ("Extraversion", "supports leadership work"),
+        "Design & Creative Media": ("Openness", "supports creativity"),
+        "Finance & Economics": ("Conscientiousness", "fits analytical work"),
+        "Entrepreneurship & Freelance": ("Openness", "fits independent mindset"),
+        "Education & Social Impact": ("Agreeableness", "fits mentoring roles")}
+    if career in career_traits:
+        trait, msg = career_traits[career]
+        if traits[trait] >= 4:
+            explanations.append(f"Your {msg}")
 
-    relevant_skills = CAREER_RELEVANT_SKILLS.get(predicted_career, [])
-    skill_explanations_added = 0
-    for skill_name, skill_value in sorted(skills.items(), key=lambda x: x[1], reverse=True):
-        if skill_name in relevant_skills and skill_value >= 3:
-            if skill_value >= 4:
-                explanations.append(f"Your excellent **{skill_name}** skills (rated {skill_value}/5) are highly valued in this field")
-            else:
-                explanations.append(f"Your **{skill_name}** proficiency (rated {skill_value}/5) is a good foundation for this career")
-            skill_explanations_added += 1
-            if skill_explanations_added >= 2:
-                break
-    # Personality-based explanations
-    personality = {
-        'Openness': input_dict.get('openness', 0),
-        'Conscientiousness': input_dict.get('conscientiousness', 0),
-        'Extraversion': input_dict.get('extraversion', 0),
-        'Agreeableness': input_dict.get('agreeableness', 0),
-    }
+    ws = inp["preferred_work_style"]
+    env = inp["preferred_environment"]
+    risk = inp["risk_tolerance"]
+    if env == "flexible" and career in ["Design & Creative Media", "Entrepreneurship & Freelance"]:
+        explanations.append("You prefer a flexible environment")
+    if env == "structured" and career in ["Finance & Economics", "Healthcare & Life Sciences"]:
+        explanations.append("You prefer structured work")
+    if risk == 2 and career == "Entrepreneurship & Freelance":
+        explanations.append("You have high risk tolerance")
     
-    # Career-specific personality matches
-    if predicted_career == "Technology & Engineering" and personality['Openness'] >= 4:
-        explanations.append("Your high openness to new ideas suits the constantly evolving tech landscape")
-    elif predicted_career == "Healthcare & Life Sciences" and personality['Agreeableness'] >= 4:
-        explanations.append("Your compassionate nature aligns with healthcare's people-centered focus")
-    elif predicted_career == "Business & Management" and personality['Extraversion'] >= 4:
-        explanations.append("Your extraverted personality is ideal for leadership and team management roles")
-    elif predicted_career == "Design & Creative Media" and personality['Openness'] >= 4:
-        explanations.append("Your creative and open mindset is perfect for innovative design work")
-    elif predicted_career == "Finance & Economics" and personality['Conscientiousness'] >= 4:
-        explanations.append("Your organized and detail-oriented nature fits well with financial analysis")
-    
-    # Work style match
-    work_style = input_dict.get('preferred_work_style', '')
-    environment = input_dict.get('preferred_environment', '')
-    risk = input_dict.get('risk_tolerance', 0)
-    
-    if work_style == 'collaborative':
-        explanations.append("Your preference for **collaborative work** matches the team-oriented nature of this field")
-    elif work_style == 'individual':
-        explanations.append("Your preference for **independent work** aligns with the autonomous aspects of this career")
-    
-    if environment == 'flexible' and predicted_career in ["Design & Creative Media", "Entrepreneurship & Freelance"]:
-        explanations.append("Your desire for a **flexible environment** is well-suited to this dynamic field")
-    elif environment == 'structured' and predicted_career in ["Finance & Economics", "Healthcare & Life Sciences"]:
-        explanations.append("Your preference for **structure** matches the organized nature of this profession")
-    
-    # Risk tolerance
-    if risk == 2 and predicted_career == "Entrepreneurship & Freelance":
-        explanations.append("Your **high risk tolerance** is essential for entrepreneurial success")
-    
-    # Education and experience match
-    field_of_study = input_dict.get('field_of_study', '')
-    experience = input_dict.get('experience_years', 0)
-    
-    if field_of_study in ['Computer Science', 'IT'] and predicted_career == "Technology & Engineering":
-        explanations.append(f"Your background in **{field_of_study}** provides a strong foundation for this career")
-    elif field_of_study == 'Engineering' and predicted_career == "Technology & Engineering":
-        explanations.append("Your engineering education directly prepares you for this field")
-    elif field_of_study in ['Business', 'Economics'] and predicted_career in ["Business & Management", "Finance & Economics"]:
-        explanations.append(f"Your **{field_of_study}** studies align perfectly with this career path")
-    
-    if experience >= 3:
-        explanations.append(f"Your **{experience} years of experience** gives you a competitive advantage in this field")
-    
-    # If no explanations generated, add generic ones
-    if len(explanations) == 0:
-        explanations.append("Your unique combination of skills and interests makes you a good fit for this career")
-        explanations.append("This field offers opportunities that match your work preferences and personality")
-    
-    return explanations
+    fos = inp["field_of_study"]
+    exp = inp["experience_years"]
+    tech_fields = ["Computer Science", "IT", "Engineering"]
+    biz_fields = ["Business", "Economics"]
+    if fos in tech_fields and career == "Technology & Engineering":
+        explanations.append(f"Your {fos} background supports this career")
+    if fos in biz_fields and career in ["Business & Management", "Finance & Economics"]:
+        explanations.append(f"Your {fos} background fits this field")
+    if exp >= 3:
+        explanations.append(f"Your {exp} years of experience is an advantage")
 
 
-# Streamlit App Configuration
-st.set_page_config(page_title="Career Recommendation", layout="wide")
+    return explanations or [
+        "Your skills and interests fit this field",
+        "This career matches your overall profile"]
+#_____________________________________________________________________
+def star(n): return "⭐" * n
+def career_card_html(icon, color, rank_label, name):
+    return f"""
+    <div style='border:2px solid {color}; border-radius:12px; padding:20px;
+                text-align:center; background:linear-gradient(135deg,{color}15 0%,{color}05 100%);'>
+        <div style='font-size:2em; margin-bottom:8px;'>{icon}</div>
+        <div style='color:{color}; font-weight:600; font-size:0.85em;
+                    text-transform:uppercase; letter-spacing:1px;'>{rank_label}</div>
+        <div style='font-weight:700; font-size:1.05em; margin:8px 0; color:#FFF;'>{name}</div>
+    </div>"""
 
+
+def header_card_html(icon, color, rank_label, name):
+    return f"""
+    <div style='text-align:center; padding:30px;
+                background:linear-gradient(135deg,{color}22 0%,{color}11 100%);
+                border-radius:15px; margin-bottom:20px;'>
+        <h1 style='margin:0; font-size:3em;'>{icon}</h1>
+        <h2 style='margin:10px 0; color:{color};'>{rank_label}</h2>
+        <h1 style='margin:0; color:#FFF; font-weight:bold;'>{name}</h1>
+    </div>"""
+
+#_______________________________________________________________________
+# Page config 
 st.title("Personality and Competency-Aligned Career Recommendation")
+st.markdown("""
+    <style>
+        .block-container {
+            max-width: 1400px !important;
+            padding-left: 3rem !important;
+            padding-right: 3rem !important;
+        }
+        div[data-testid="stSlider"] {
+            padding-right: 1.5rem;
+        }
+        div[data-testid="stSlider"] label p {
+            font-size: 0.95rem !important;
+            white-space: nowrap;
+        }
+        section[data-testid="stSidebar"] {
+            min-width: 0px;
+        }
+        div[data-testid="column"] {
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+        }
+        .stSlider {
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+        }
+    </style>
+""", unsafe_allow_html=True)
 st.markdown("### Answer the questions below to get your personalized career path suggestion")
 st.markdown("---")
 
-# Form
+#Form
 with st.form("profile_form"):
-    st.subheader("👋 Personal Information")
-    id_col1, id_col2 = st.columns(2)
-    with id_col1:
-        user_id = st.text_input("User ID", placeholder="Enter User ID", help="Optional identifier for your records")
-    with id_col2:
-        user_name = st.text_input("Name", placeholder="Enter Name", help="Your name (optional)")
-
+    st.subheader(" Personal Information")
+    c1, c2 = st.columns(2)
+    user_id   = c1.text_input("User ID", placeholder="Enter User ID")
+    user_name = c2.text_input("Name",    placeholder="Enter Name")
     st.markdown("---")
-    
-    # Section 1: Basic Information
-    st.subheader("📋 Basic Information")
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        age = st.number_input("Age", min_value=18, max_value=65, value=24)
-    with col2:
-        education = st.selectbox("Education Level", ["High School", "Undergraduate", "Graduate"])
-    with col3:
-        field = st.selectbox("Field of Study", ["Computer Science", "IT", "Engineering", "Business", "Economics", "Psychology", "Design", "Biology", "Other"])
-    with col4:
-        experience_input = st.text_input("Years of Experience", value="2",
-                                         help="Enter experience in format like '2 years' or just '2'")
 
+    # Basic Info
+    st.subheader(" Basic Information")
+    b1, b2, b3, b4 = st.columns(4)
+    age        = b1.number_input("Age", 18, 65, 24)
+    education  = b2.selectbox("Education Level", ["High School", "Undergraduate", "Graduate"])
+    field      = b3.selectbox("Field of Study",  ["Computer Science", "IT", "Engineering", "Business",
+                                                   "Economics", "Psychology", "Design", "Biology", "Other"])
+    exp_input  = b4.text_input("Years of Experience", value="2")
     st.markdown("---")
-    
-    # Section 2: Personality Traits
-    st.subheader("🧠 Personality Traits")
+
+    # Personality
+    st.subheader(" Personality Traits")
     st.caption("Rate yourself on a scale of 1 (Low) to 5 (High)")
-    
-    p_col1, p_col2, p_col3, p_col4, p_col5 = st.columns(5)
-    
-    with p_col1:
-        openness = st.slider("Openness", min_value=1, max_value=5, value=3, 
-                            help="Imagination, creativity, openness to new experiences")
-    with p_col2:
-        consc = st.slider("Conscientiousness", min_value=1, max_value=5, value=3,
-                         help="Organization, dependability, discipline")
-    with p_col3:
-        extra = st.slider("Extraversion", min_value=1, max_value=5, value=3,
-                         help="Sociability, assertiveness, talkativeness")
-    with p_col4:
-        agree = st.slider("Agreeableness", min_value=1, max_value=5, value=3,
-                         help="Compassion, cooperation, trustworthiness")
-    with p_col5:
-        neuro = st.slider("Neuroticism", min_value=1, max_value=5, value=3,
-                         help="Emotional stability, anxiety levels")
-
+    p_vals = {}
+    for col, (trait, help_txt) in zip(st.columns(5,gap="small"), PERSONALITY_TRAITS.items()):
+        p_vals[trait.lower()] = col.slider(trait, 1, 5, 3, help=help_txt)
     st.markdown("---")
-    
-    # Section 3: Skills
-    st.subheader("💪 Skills Assessment")
+
+    # Skills
+    st.subheader(" Skills Assessment")
     st.caption("Rate your proficiency from 0 (None) to 5 (Expert)")
-    
-    s_col1, s_col2, s_col3, s_col4, s_col5, s_col6 = st.columns(6)
-    
-    with s_col1:
-        tech = st.slider("Technical", min_value=0, max_value=5, value=2)
-    with s_col2:
-        data = st.slider("Data Reasoning", min_value=0, max_value=5, value=2)
-    with s_col3:
-        comm = st.slider("Communication", min_value=0, max_value=5, value=3)
-    with s_col4:
-        prob = st.slider("Problem Solving", min_value=0, max_value=5, value=3)
-    with s_col5:
-        leader = st.slider("Leadership", min_value=0, max_value=5, value=2)
-    with s_col6:
-        creat = st.slider("Creative Thinking", min_value=0, max_value=5, value=3)
-
+    s_vals = {}
+    for col, skill in zip(st.columns(6, gap="small"), SKILLS):
+        s_vals[skill] = col.slider(skill, 0, 5, 3)
     st.markdown("---")
-    
-    # Section 4: Interests
-    st.subheader("🎯 Interest Areas")
+
+    # Interests
+    st.subheader(" Interest Areas")
     st.caption("Rate your interest level from 0 (Not Interested) to 100 (Highly Interested)")
-    
-    i_col1, i_col2, i_col3, i_col4, i_col5 = st.columns(5)
-    
-    with i_col1:
-        it = st.slider("Technology", min_value=0, max_value=100, value=50)
-    with i_col2:
-        bu = st.slider("Business", min_value=0, max_value=100, value=40)
-    with i_col3:
-        cr = st.slider("Creative/Arts", min_value=0, max_value=100, value=50)
-    with i_col4:
-        he = st.slider("Health & Social", min_value=0, max_value=100, value=40)
-    with i_col5:
-        re = st.slider("Research/Academic", min_value=0, max_value=100, value=30)
-
+    i_vals = {}
+    for col, interest in zip(st.columns(5), INTERESTS):
+        i_vals[interest] = col.slider(interest, 0, 100, 50)
     st.markdown("---")
-    
-    # Section 5: Work Preferences
-    st.subheader("⚙️ Work Preferences")
-    
-    w_col1, w_col2, w_col3 = st.columns(3)
-    
-    with w_col1:
-        work_style = st.radio("Preferred Work Style", 
-                             ["individual", "collaborative"],
-                             help="Do you prefer working alone or in teams?")
-    with w_col2:
-        env = st.radio("Preferred Environment", 
-                      ["structured", "flexible"],
-                      help="Do you prefer a structured routine or flexible schedule?")
-    with w_col3:
-        risk = st.selectbox("Risk Tolerance", 
-                           ["Low", "Medium", "High"],
-                           help="How comfortable are you with uncertainty and risk?")
 
+    # Work Preferences
+    st.subheader(" Work Preferences")
+    w1, w2, w3 = st.columns(3)
+    work_style = w1.radio("Preferred Work Style", ["individual", "collaborative"])
+    env        = w2.radio("Preferred Environment", ["structured", "flexible"])
+    risk       = w3.selectbox("Risk Tolerance", ["Low", "Medium", "High"])
     st.markdown("---")
-    submitted = st.form_submit_button("🚀 Get My Career Recommendation", 
-                                     type="primary", 
-                                     use_container_width=True)
+
+    submitted = st.form_submit_button("Get My Career Recommendation", type="primary", use_container_width=True)
 
 
+# Results
 if submitted:
-    
     try:
-        experience = float(str(experience_input).replace("years", "").replace("year", "").strip())
+        experience = float(str(exp_input).replace("years", "").replace("year", "").strip())
     except:
         experience = 0
-    
-    # Ensure experience doesn't exceed age - 18
-    experience = min(experience, max(0, age - 18))
-    experience = max(0, experience)
-    
-    # Validation Input
-    total_interests = sum([it, bu, cr, he, re])
-    total_skills = sum([tech, data, comm, prob, leader, creat])
-    
-    if total_interests < 50 or total_skills < 5:
-        st.warning("📝 Your profile shows limited interests/skills. Consider completing a more detailed assessment.")
-    
-    if experience == 0:
-        st.info("ℹ️ No experience detected. Recommendations will focus on entry-level opportunities.")
-    
-    # Map risk tolerance to numeric
-    risk_numeric =  risk_tolerance_mapping.get(risk, 1)
-    
-    # Valid Fields
-    valid_fields = ['Computer Science', 'Psychology', 'IT', 'Design', 'Biology', 
-                    'Business', 'Economics', 'Engineering', 'Other']
-    
+    experience = max(0, min(experience, max(0, age - 18)))
+
+    # Validation warnings
+    if sum(i_vals.values()) < 50 or sum(s_vals.values()) < 5:
+        st.warning(" Your profile shows limited interests/skills. Consider a more detailed assessment.")
+    risk_numeric = risk_tolerance_mapping[risk] 
+    #Create input dict
     input_dict = {
-        "age": age,
-        "experience_years": experience,
-        "openness": openness,
-        "conscientiousness": consc,
-        "extraversion": extra,
-        "agreeableness": agree,
-        "neuroticism": neuro,
-        "technical_skill": tech,
-        "data_reasoning_skill": data,
-        "communication_skill": comm,
-        "problem_solving_skill": prob,
-        "leadership_skill": leader,
-        "creative_thinking_skill": creat,
-        "interest_technology": it,
-        "interest_business": bu,
-        "interest_creative": cr,
-        "interest_health_social": he,
-        "interest_research_academic": re,
-        "risk_tolerance": risk_numeric,
-        "education_level": education,
-        "field_of_study": field if field in valid_fields else "Other",
-        "preferred_work_style": work_style,
-        "preferred_environment": env
+    "age":                    age,
+    "experience_years":       experience,
+    "openness":               p_vals["openness"],
+    "conscientiousness":      p_vals["conscientiousness"],
+    "extraversion":           p_vals["extraversion"],
+    "agreeableness":          p_vals["agreeableness"],
+    "neuroticism":            p_vals["neuroticism"],
+    "technical_skill":        s_vals["Technical"],
+    "data_reasoning_skill":   s_vals["Data Reasoning"],
+    "communication_skill":    s_vals["Communication"],
+    "problem_solving_skill":  s_vals["Problem Solving"],
+    "leadership_skill":       s_vals["Leadership"],
+    "creative_thinking_skill":s_vals["Creative Thinking"],
+    "interest_technology":    i_vals["Technology"],
+    "interest_business":      i_vals["Business"],
+    "interest_creative":      i_vals["Creative/Arts"],
+    "interest_health_social": i_vals["Health & Social"],
+    "interest_research_academic": i_vals["Research/Academic"],
+    "risk_tolerance":         risk_numeric,
+    "education_level":        education,
+    "field_of_study":         field if field in ['Computer Science','IT','Engineering','Business',
+                                                 'Economics','Psychology','Design','Biology'] else "Other",
+    "preferred_work_style":   work_style,
+    "preferred_environment":  env,
     }
 
+    # Feature engineering + encode
     df_input = pd.DataFrame([input_dict])
-
-    # Define features
-    numeric_features = [
-        'age', 'experience_years', 'openness', 'conscientiousness', 'extraversion',
-        'agreeableness', 'neuroticism', 'technical_skill', 'data_reasoning_skill',
-        'communication_skill', 'problem_solving_skill', 'leadership_skill',
-        'creative_thinking_skill', 'interest_technology', 'interest_business',
-        'interest_creative', 'interest_health_social', 'interest_research_academic',
-        'risk_tolerance']
-    categorical_features = ['education_level', 'field_of_study', 'preferred_work_style', 'preferred_environment']
-    interest_columns = ['interest_technology', 'interest_business', 'interest_creative',
-                        'interest_health_social', 'interest_research_academic']
-    # Feature Engineering
-    df_input['work_life_alignment'] = (
-        (df_input['preferred_environment'].eq('flexible')).astype(int) -
-        (df_input['preferred_environment'].eq('structured')).astype(int) +
-        (df_input['risk_tolerance'].eq(0)).astype(int) -
-        (df_input['risk_tolerance'].eq(2)).astype(int)
+    df_input["work_life_alignment"] = (
+        df_input["preferred_environment"].eq("flexible").astype(int) -
+        df_input["preferred_environment"].eq("structured").astype(int) +
+        df_input["risk_tolerance"].eq(0).astype(int) -
+        df_input["risk_tolerance"].eq(2).astype(int)
     )
-    # Encoding
+    categorical_features = ["education_level", "field_of_study", "preferred_work_style", "preferred_environment"]
     df_encoded = pd.get_dummies(df_input, columns=categorical_features, drop_first=True)
-    
-    # Align columns with training data
     df_aligned = df_encoded.reindex(columns=feature_columns, fill_value=0)
 
-    # Predict primary career cluster
-    pred = model.predict(df_aligned)[0]
-    confidence = model.predict_proba(df_aligned)[0].max()
-    
-    # Get top 3 predictions
+    # Predict
+    pred         = model.predict(df_aligned)[0]
     probabilities = model.predict_proba(df_aligned)[0]
-    top_3_indices = np.argsort(probabilities)[-3:][::-1]
-    careers = model.classes_
+    careers      = model.classes_
+    top3         = np.argsort(probabilities)[-3:][::-1]
+    confidence   = probabilities[top3[0]]
 
-    # Show warning if top prediction has low confidence or interests are flat
-    interest_values = [it, bu, cr, he, re]
-    interests_are_flat = (max(interest_values) - min(interest_values)) <= 10
-    
-    if confidence < 0.4 or interests_are_flat:
-        st.warning("⚠️ **Ambiguous Profile Detected**: Your interests are fairly balanced across domains. We're showing your top 3 career matches to help you explore options.")
-    
+    # Ambiguity warning
+    interest_vals = list(i_vals.values())
+    if confidence < 0.4 or (max(interest_vals) - min(interest_vals)) <= 10:
+        st.warning("**Ambiguous Profile Detected**: Showing your top 3 career matches to help you explore options.")
+
+    # ── Top 3 summary cards ────────────────────────────────────────────────
     st.markdown("### 🎯 Your Top Career Matches")
     st.markdown("---")
+    rank_labels = ["1st Match", "2nd Match", "3rd Match"]
+    for col, idx, label in zip(st.columns(3), top3, rank_labels):
+        c = CAREER_INFO.get(careers[idx], {})
+        col.markdown(career_card_html(c.get("icon","🎯"), c.get("color","#4A90E2"), label, careers[idx]), unsafe_allow_html=True)
 
-    summary_cols = st.columns(3)
-    for i, idx in enumerate(top_3_indices):
-        career_name = careers[idx]
-        match_score = probabilities[idx] * 100
-        c_data = CAREER_INFO.get(career_name, {})
-        s_icon = c_data.get('icon', '🎯')
-        s_color = c_data.get('color', '#4A90E2')
-        rank_label = ["1st Match", "2nd Match", "3rd Match"][i]
+    # Field-career alignment hint
+    expected = STRONG_ALIGNMENTS.get(field, [])
+    if expected and not any(careers[i] in expected for i in top3):
+        st.warning(f"**Unexpected Match**: Based on your **{field}** background, also explore: {', '.join(expected)}")
 
-        with summary_cols[i]:
-            st.markdown(f"""
-                <div style='
-                    border: 2px solid {s_color};
-                    border-radius: 12px;
-                    padding: 20px;
-                    text-align: center;
-                    background: linear-gradient(135deg, {s_color}15 0%, {s_color}05 100%);
-                '>
-                    <div style='font-size: 2em; margin-bottom: 8px;'>{s_icon}</div>
-                    <div style='color: {s_color}; font-weight: 600; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px;'>{rank_label}</div>
-                    <div style='font-weight: 700; font-size: 1.05em; margin: 8px 0; color: #FFFFFF;'>{career_name}</div>
-                </div>
-            """, unsafe_allow_html=True)
-    
-    # Check field-career alignment
-    STRONG_ALIGNMENTS = {
-        'Computer Science': ['Technology & Engineering'],
-        'IT': ['Technology & Engineering'],
-        'Engineering': ['Technology & Engineering'],
-        'Biology': ['Healthcare & Life Sciences'],
-        'Business': ['Business & Management', 'Finance & Economics'],
-        'Economics': ['Finance & Economics', 'Business & Management'],
-        'Psychology': ['Healthcare & Life Sciences', 'Education & Social Impact'],
-        'Design': ['Design & Creative Media']
-    }
-
-    expected_careers = STRONG_ALIGNMENTS.get(field, [])
-    if expected_careers:
-        # Get the top 3 career names
-        top_3_careers = [careers[idx] for idx in top_3_indices]
-        # Check if any expected career is in top 3
-        expected_in_top3 = any(career in top_3_careers for career in expected_careers)
-        if not expected_in_top3:
-            st.warning(f"🤔 **Unexpected Match**: Based on your **{field}** background, you might also want to explore: {', '.join(expected_careers)}")
-    # Display Header with User Info
+    # User header
     if user_name or user_id:
         st.markdown("---")
-        header_col1, header_col2 = st.columns([3, 1])
-        with header_col1:
-            if user_name:
-                st.markdown(f"### 👋 Hello, **{user_name}**!")
-            else:
-                st.markdown("### 👋 Hello!")
-        with header_col2:
-            if user_id:
-                st.markdown(f"**ID:** `{user_id}`")
+        st.markdown(f"### 👋 Hello, **{user_name or 'there'}**!" + (f"  **ID:** `{user_id}`" if user_id else ""))
 
-    # Display Profile Summary
+    # ── Profile overview ───────────────────────────────────────────────────
     st.markdown("---")
     st.subheader("📊 Profile Overview")
-    
-    sum_col1, sum_col2, sum_col3 = st.columns(3)
-    
-    with sum_col1:
-        st.markdown("##### 👤 Demographics")
-        st.info(f"""
-        **Age:** {age} years  
-        **Education:** {education}  
-        **Field of Study:** {field}  
-        **Experience:** {experience} years
-        """)
-        
-        st.markdown("##### ⚙️ Work Preferences")
-        st.info(f"""
-        **Work Style:** {work_style.capitalize()}  
-        **Environment:** {env.capitalize()}  
-        **Risk Tolerance:** {risk}
-        """)
-    
-    with sum_col2:
-        st.markdown("##### 🧠 Personality Profile")
-        personality_data = {
-            "Openness": openness,
-            "Conscientiousness": consc,
-            "Extraversion": extra,
-            "Agreeableness": agree,
-            "Neuroticism": neuro
-        }
-        for trait, score in personality_data.items():
-            st.write(f"**{trait}:** {'⭐' * score}")
-            
-        st.markdown("##### 💪 Skills Overview")
-        skills_data = {
-            "Technical": tech,
-            "Data Reasoning": data,
-            "Communication": comm,
-            "Problem Solving": prob,
-            "Leadership": leader,
-            "Creative Thinking": creat
-        }
-        for skill, level in skills_data.items():
-            st.write(f"**{skill}:** {'⭐' * level}")
-    
-    with sum_col3:
-        st.markdown("##### 🎯 Interest Levels")
-        interests_data = {
-            "Technology": it,
-            "Business": bu,
-            "Creative/Arts": cr,
-            "Health & Social": he,
-            "Research/Academic": re
-        }
-        
-        for interest, value in interests_data.items():
-            st.write(f"**{interest}:** {value}/100")
-            st.progress(value / 100)
-    
-    # Display Full Prediction Results for each of the 3 careers
-    for rank, idx in enumerate(top_3_indices):
-        current_career = careers[idx]
-        match_score = probabilities[idx] * 100
-        rank_label = ["🥇 Primary Recommendation", "🥈 Second Recommendation", "🥉 Third Recommendation"][rank]
+    ov1, ov2, ov3 = st.columns(3)
 
-        career_data = CAREER_INFO.get(current_career, {
-            'icon': '🎯',
-            'color': '#4A90E2',
-            'description': 'This is an exciting career path with many opportunities.',
-            'key_skills': ['Multiple skills required'],
-            'salary_range': 'Competitive',
-            'growth_outlook': 'Positive outlook',
-            'work_style': 'Varies'
-        })
+    with ov1:
+        st.markdown("#####  Demographics")
+        st.info(f"**Age:** {age}y  \n**Education:** {education}  \n**Field:** {field}  \n**Experience:** {experience}y")
+        st.markdown("#####  Work Preferences")
+        st.info(f"**Work Style:** {work_style.capitalize()}  \n**Environment:** {env.capitalize()}  \n**Risk:** {risk}")
 
-        icon = career_data.get('icon', '🎯')
-        color = career_data.get('color', '#4A90E2')
+    with ov2:
+        st.markdown("#####  Personality")
+        for trait, val in p_vals.items():
+            st.write(f"**{trait.capitalize()}:** {star(val)}")
+        st.markdown("#####  Skills")
+        for skill, val in s_vals.items():
+            st.write(f"**{skill}:** {star(val)}")
+
+    with ov3:
+        st.markdown("#####  Interests")
+        for interest, val in i_vals.items():
+            st.write(f"**{interest}:** {val}/100")
+            st.progress(val / 100)
+
+    #Full career cards 
+    full_rank_labels = ["Primary Recommendation", " Second Recommendation", "Third Recommendation"]
+    for rank, idx in enumerate(top3):
+        name = careers[idx]
+        cd   = CAREER_INFO.get(name, {"icon":"🎯","color":"#4A90E2","description":"","key_skills":[],"salary_range":"","growth_outlook":"","work_style":""})
 
         st.markdown("---")
+        st.markdown(header_card_html(cd["icon"], cd["color"], full_rank_labels[rank], name), unsafe_allow_html=True)
 
-        # Header card
-        st.markdown(f"""
-            <div style='text-align: center; padding: 30px; background: linear-gradient(135deg, {color}22 0%, {color}11 100%); border-radius: 15px; margin-bottom: 20px;'>
-                <h1 style='margin: 0; font-size: 3em;'>{icon}</h1>
-                <h2 style='margin: 10px 0; color: {color};'>{rank_label}</h2>
-                <h1 style='margin: 0; color: #FFFFFF; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);'>{current_career}</h1>
-            </div>
-        """, unsafe_allow_html=True)
-
-        # Description
         st.markdown("### 📖 About This Career Path")
-        st.info(career_data.get('description', 'This career path offers exciting opportunities.'))
+        st.info(cd["description"])
 
-        # Roles + Insights
-        col1, col2 = st.columns([3, 2])
-
-        with col1:
+        r1, r2 = st.columns([3, 2])
+        with r1:
             st.markdown("### 💼 Example Career Roles")
-            st.caption(f"Based on your education level ({education}) and field of study ({field})")
-            relevant_roles = get_relevant_roles(current_career, education, field)
-            for i, role in enumerate(relevant_roles, 1):
+            st.caption(f"Based on your education ({education}) and field ({field})")
+            for i, role in enumerate(get_relevant_roles(name, education, field), 1):
                 st.markdown(f"{i}. **{role}**")
-
-        with col2:
-            st.markdown("### 📊 Career Insights")
-            st.markdown("**💰 Salary Range**")
-            st.write(career_data.get('salary_range', 'Competitive'))
-            st.markdown("**📈 Job Market Outlook**")
-            st.write(career_data.get('growth_outlook', 'Positive outlook'))
-            st.markdown("**🔑 Key Skills Needed**")
-            for skill in career_data.get('key_skills', ['Multiple skills']):
-                st.write(f"• {skill}")
-            st.markdown("**⚙️ Typical Work Style**")
-            st.write(career_data.get('work_style', 'Varies'))
-
-    # Decision Rationale — primary match only
+        
+    # Decision rationale
     st.markdown("---")
     st.markdown("### 🔍 Decision Rationale")
     st.caption("Based on your profile, here's why this career suits you:")
     explanations = explain_prediction(input_dict, pred)
-    for explanation in explanations:
-        st.markdown(f"✓ {explanation}")
-    
-    # Save Results Section
+    for reason in explanations:
+        st.markdown(f"✓ {reason}")
+
+# Download report
     st.markdown("---")
     st.subheader("📄 Save Your Results")
-
     if user_id or user_name:
-        report = f"""
-CAREER RECOMMENDATION REPORT
-{'='*50}
-
-User: {user_name or 'N/A'} (ID: {user_id or 'N/A'})
-Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-
-PRIMARY RECOMMENDATION: {pred}
-
-PROFILE: {age}y, {education}, {field}, {experience}y exp
-
-TOP 3 MATCHES:
-{chr(10).join([f"{i}. {careers[idx]}" for i, idx in enumerate(top_3_indices, 1)])}
-
-DECISION FACTORS:
-{chr(10).join([f"• {exp}" for exp in explanations])}
-"""
-    
-        st.download_button(
-            "📥 Download Your Career Report",
-            report,
-            f"career_report_{user_id or 'anonymous'}_{datetime.now().strftime('%Y%m%d_%H%M')}.txt",
-            type="primary",
-            use_container_width=True
+        selected_options = "\n".join(f"{k.replace('_',' ').title()}: {v}" for k,v in input_dict.items())
+        top3_clusters   = "\n".join(f"{i}. {careers[idx]}" for i,idx in enumerate(top3,1))
+        report = (
+            f"CAREER REPORT\n"
+            f"{'='*35}\n\n"
+            f"Name: {user_name or 'N/A'}    ID: {user_id or 'N/A'}\n\n"
+            f"SELECTED OPTIONS\n"
+            f"{'-'*16}\n"
+            f"{selected_options}\n\n"
+            f"TOP 3 CAREER CLUSTERS\n"
+            f"{'-'*20}\n"
+            f"{top3_clusters}\n"
         )
+
+        st.download_button(" Download", report, f"career_report_{user_id or 'anonymous'}.txt", use_container_width=True)
     else:
-        st.info("💡 Enter a User ID above to enable report download")
+        st.info("Enter Name or ID to enable download")
