@@ -266,12 +266,12 @@ if submitted:
     top3         = np.argsort(probabilities)[-3:][::-1]
     confidence   = probabilities[top3[0]]
 
-    # Ambiguity warning
+    # Ambiguity
     interest_vals = list(i_vals.values())
     if confidence < 0.4 or (max(interest_vals) - min(interest_vals)) <= 10:
         st.warning("**Ambiguous Profile Detected**: Showing your top 3 career matches to help you explore options.")
 
-    # ── Top 3 summary cards ────────────────────────────────────────────────
+    # Top 3 summary
     st.markdown("### 🎯 Your Top Career Matches")
     st.markdown("---")
     rank_labels = ["1st Match", "2nd Match", "3rd Match"]
@@ -287,11 +287,11 @@ if submitted:
     # User header
     if user_name or user_id:
         st.markdown("---")
-        st.markdown(f"### 👋 Hello, **{user_name or 'there'}**!" + (f"  **ID:** `{user_id}`" if user_id else ""))
+        st.markdown(f"###  Hello, **{user_name or 'there'}**!")
 
-    # ── Profile overview ───────────────────────────────────────────────────
+    #Profile
     st.markdown("---")
-    st.subheader("📊 Profile Overview")
+    st.subheader("Profile Overview")
     ov1, ov2, ov3 = st.columns(3)
 
     with ov1:
@@ -318,24 +318,24 @@ if submitted:
     full_rank_labels = ["Primary Recommendation", " Second Recommendation", "Third Recommendation"]
     for rank, idx in enumerate(top3):
         name = careers[idx]
-        cd   = CAREER_INFO.get(name, {"icon":"🎯","color":"#4A90E2","description":"","key_skills":[],"salary_range":"","growth_outlook":"","work_style":""})
+        cd = CAREER_INFO.get(name, {"icon": "🎯", "color": "#4A90E2", "description": ""})
 
         st.markdown("---")
         st.markdown(header_card_html(cd["icon"], cd["color"], full_rank_labels[rank], name), unsafe_allow_html=True)
 
-        st.markdown("### 📖 About This Career Path")
+        st.markdown("###  About This Career Path")
         st.info(cd["description"])
 
         r1, r2 = st.columns([3, 2])
         with r1:
-            st.markdown("### 💼 Example Career Roles")
+            st.markdown("###  Example Career Roles")
             st.caption(f"Based on your education ({education}) and field ({field})")
             for i, role in enumerate(get_relevant_roles(name, education, field), 1):
                 st.markdown(f"{i}. **{role}**")
         
     # Decision rationale
     st.markdown("---")
-    st.markdown("### 🔍 Decision Rationale")
+    st.markdown("###  Decision Rationale")
     st.caption("Based on your profile, here's why this career suits you:")
     explanations = explain_prediction(input_dict, pred)
     for reason in explanations:
@@ -343,7 +343,7 @@ if submitted:
 
 # Download report
     st.markdown("---")
-    st.subheader("📄 Save Your Results")
+    st.subheader("Save Your Results")
     if user_id or user_name:
         selected_options = "\n".join(f"{k.replace('_',' ').title()}: {v}" for k,v in input_dict.items())
         top3_clusters   = "\n".join(f"{i}. {careers[idx]}" for i,idx in enumerate(top3,1))
